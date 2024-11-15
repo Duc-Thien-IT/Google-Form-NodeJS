@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "es2016",
+    "lib": ["ESNext", "DOM"],
+    "module": "CommonJS",
+    "rootDir": "./src",                          /* Root directory for your source files */
+    "moduleResolution": "node",
+    "types": ["node"],
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
+    "sourceMap": true,
+    "outDir": "./dist",                          /* Output directory for compiled files */
+    "strict": true,
+    "skipLibCheck": true,
+    "typeRoots": [
+      "./node_modules/@types",
+      "./src/types"
+    ]
+  },
+  "include": [
+    "src/**/*",
+    "src/types/**/*"
+  ],                       /* Specify the source files to include */
+  "exclude": [
+    "dist"
+  ]
+}
+  

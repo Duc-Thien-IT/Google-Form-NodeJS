@@ -1,14 +1,18 @@
 import express from 'express';
 import { createForm, getUserForms, updateForm, deleteForm } from '../controllers/FormController';
+import middlewareController from '../controllers/middlewareController';
 
 const router = express.Router();
 
 /**
  * @swagger
- * /forms:
+ * /v1/forms/createForm:
  *   post:
- *     summary: Tạo một form mới
+ *     summary: Create new Form
+ *     description: Create a new form
  *     tags: [Forms]
+ *     security:
+ *       - token: []
  *     requestBody:
  *       required: true
  *       content:
@@ -44,14 +48,17 @@ const router = express.Router();
  *       500:
  *         description: Lỗi khi tạo form
  */
-router.post('/forms', createForm);
+router.post('/createForm', middlewareController.verifyToken, createForm);
 
 /**
  * @swagger
- * /forms/users/{userId}:
+ * /v1/forms/users/{userId}:
  *   get:
  *     summary: Lấy tất cả form của người dùng
+ *     description: Hiển thị form của người dùng này
  *     tags: [Forms]
+ *     security:
+ *       - token: []
  *     parameters:
  *       - in: path
  *         name: userId
@@ -87,19 +94,28 @@ router.post('/forms', createForm);
  *       500:
  *         description: Lỗi khi lấy form
  */
-router.get('/forms/users/:userId', getUserForms);
+router.get('/users/:userId',  middlewareController.verifyToken, getUserForms);
 
 /**
  * @swagger
- * /forms/{formId}:
+ * /v1/forms/{userId}/{formId}:
  *   put:
- *     summary: Cập nhật thông tin form
+ *     summary: Update a form
+ *     description: Update a form by form ID and user ID
  *     tags: [Forms]
+ *     security:
+ *       - token: []
  *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         description: User ID
+ *         schema:
+ *           type: string
  *       - in: path
  *         name: formId
  *         required: true
- *         description: ID của form cần cập nhật
+ *         description: Form ID
  *         schema:
  *           type: string
  *     requestBody:
@@ -129,39 +145,46 @@ router.get('/forms/users/:userId', getUserForms);
  *                             type: string
  *                           is_correct:
  *                             type: boolean
- *               userId:
- *                 type: string
  *     responses:
  *       200:
- *         description: Cập nhật form thành công
+ *         description: Form updated successfully
  *       404:
- *         description: Form không tồn tại hoặc bạn không có quyền sửa form này
+ *         description: Form not found or you do not have permission to update this form
  *       500:
- *         description: Lỗi khi cập nhật form
+ *         description: Error updating form
  */
-router.put('/forms/:formId', updateForm);
+router.put('/:userId/:formId', middlewareController.verifyToken, updateForm);
 
 /**
  * @swagger
- * /forms/{formId}:
+ * /v1/forms/{userId}/{formId}:
  *   delete:
- *     summary: Xóa một form
+ *     summary: Delete a form
+ *     description: Delete a form by form ID and user ID
  *     tags: [Forms]
+ *     security:
+ *       - token: []
  *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         description: User ID
+ *         schema:
+ *           type: string
  *       - in: path
  *         name: formId
  *         required: true
- *         description: ID của form cần xóa
+ *         description: Form ID
  *         schema:
  *           type: string
  *     responses:
  *       200:
- *         description: Xóa form thành công
+ *         description: Form deleted successfully
  *       404:
- *         description: Form không tồn tại hoặc bạn không có quyền xóa form này
+ *         description: Form not found or you do not have permission to delete this form
  *       500:
- *         description: Lỗi khi xóa form
+ *         description: Error deleting form
  */
-router.delete('/forms/:formId', deleteForm);
+router.delete('/:userId/:formId', middlewareController.verifyToken, deleteForm);
 
 export default router;

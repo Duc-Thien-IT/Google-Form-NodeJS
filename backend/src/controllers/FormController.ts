@@ -1,9 +1,10 @@
 import { Request, Response } from 'express';
-import { Sequelize, Transaction } from 'sequelize';
+import { Op, Sequelize, Transaction } from 'sequelize';
 import sequelize from '../config/ConnectDB';
 import Form from '../models/Form';
 import Question from '../models/Question';
 import Answer from '../models/Answer';
+import User from '../models/User';
 
 export const createForm = async (req: Request, res: Response): Promise<void> => {
     const { title, description, questions, userId } = req.body;
@@ -97,102 +98,127 @@ export const getUserForms = async (req: Request, res: Response):Promise<void> =>
     }
 };
 
-export const updateForm = async (req: Request, res: Response):Promise<void> => {
-    const formId = req.params.formId;
-    const { title, description, questions, userId } = req.body;
-
-    const transaction: Transaction = await sequelize.transaction();
+export const updateForm = async (req: Request, res: Response): Promise<void> => {
+    const { userId, formId } = req.params;
+    const { title, description, questions } = req.body;
 
     try {
         const form = await Form.findOne({ where: { id: formId, user_id: userId } });
 
         if (!form) {
-             res.status(404).json({
-                message: 'Form not found'
-            });
-            return
+            res.status(404).json({ message: 'Form not found or you do not have permission to update it.' });
         }
 
-        await form.update({ title, description, updated_at: new Date() }, { transaction });
+        const transaction = await sequelize.transaction();
 
-        await Question.destroy({ where: { form_id: formId }, transaction });
-        for (const question of questions) {
-            const newQuestion = await Question.create(
+        try {
+            await form?.update(
                 {
-                    id: `QU${Math.floor(1000 + Math.random() * 9000)}`,
-                    question_text: question.question_text,
-                    form_id: formId,
-                    created_at: new Date(),
+                    title,
+                    description,
                     updated_at: new Date(),
                 },
                 { transaction }
             );
 
-            for (const answer of question.answers) {
-                await Answer.create(
-                    {
-                        id: `AN${Math.floor(1000 + Math.random() * 9000)}`,
-                        answer_text: answer.answer_text,
-                        is_correct: answer.is_correct,
-                        question_id: newQuestion.id,
-                        created_at: new Date(),
-                        updated_at: new Date(),
-                    },
-                    { transaction }
-                );
+            if (questions && questions.length > 0) {
+                for (let question of questions) {
+                    // Cập nhật hoặc thêm câu hỏi mới
+                    await Question.upsert(
+                        {
+                            id: question.id, 
+                            question_text: question.question_text,
+                            form_id: formId,  
+                            created_at: question.created_at || new Date(), 
+                            updated_at: new Date(),
+                        },
+                        { transaction }
+                    );
+
+                    // Cập nhật câu trả lời nếu cần thiết
+                    if (question.answers && question.answers.length > 0) {
+                        for (let answer of question.answers) {
+                            await Answer.upsert(
+                                {
+                                    id: answer.id, 
+                                    answer_text: answer.answer_text,
+                                    is_correct: answer.is_correct, 
+                                    question_id: question.id, 
+                                    created_at: answer.created_at || new Date(), 
+                                    updated_at: new Date(), 
+                                },
+                                { transaction }
+                            );
+                        }
+                    }
+                }
             }
+
+            await transaction.commit();
+
+            res.status(200).json({ message: 'Form and questions updated successfully' });
+        } catch (error) {
+            await transaction.rollback();
+            console.error(error);
+            res.status(500).json({ message: 'Error updating form' });
         }
-
-        await transaction.commit();
-
-         res.status(200).json({
-            message: 'Form updated successfully!',
-            form
-        });
-
     } catch (error) {
-        await transaction.rollback();
-
-        console.error('Error update form:', error);
-         res.status(500).json({
-            message: 'Error update form',
-            error: (error as Error).message
-        });
+        console.error('Error updating form:', error);
+        res.status(500).json({ message: 'Error updating form' });
     }
 };
 
-export const deleteForm = async (req: Request, res: Response):Promise<void> => {
-    const formId = req.params.formId;
-    const userId = req.body.userId;
+   
 
-    const transaction: Transaction = await sequelize.transaction();
+export const deleteForm = async (req: Request, res: Response): Promise<void> => {
+    const { formId, userId } = req.params; // formId và userId lấy từ URL
 
     try {
+        // Tìm form theo formId và userId (đảm bảo người dùng có quyền xóa form)
         const form = await Form.findOne({ where: { id: formId, user_id: userId } });
 
         if (!form) {
-             res.status(404).json({
-                message: 'Form not found or you do not have permission to delete this form.'
+            res.status(404).json({
+                message: 'Form not found'
             });
             return;
         }
 
-        await form.destroy({ transaction });
+        // Bắt đầu một giao dịch (transaction)
+        const transaction = await sequelize.transaction();
 
-        await transaction.commit();
+        try {
+            await Answer.destroy({
+                where: {
+                    question_id: {
+                        [Op.in]: sequelize.literal(`SELECT id FROM "questions" WHERE form_id = ${formId}`),
+                    },
+                },
+                transaction,
+            });
 
-         res.status(200).json({
-            message: 'Form deleted successfully!'
-        });
+            await Question.destroy({
+                where: {
+                    form_id: formId
+                },
+                transaction,
+            });
 
+            await form.destroy({ transaction });
+
+            await transaction.commit();
+
+            res.status(200).json({ message: 'Form and related questions and answers deleted successfully' });
+        } catch (error) {
+            await transaction.rollback();
+            console.error(error);
+            res.status(500).json({ message: 'Error deleting form' });
+        }
     } catch (error) {
-        await transaction.rollback();
-
-        console.error('Error delete form:', error);
-         res.status(500).json({
-            message: 'Error delete form',
+        console.error('Error deleting form:', error);
+        res.status(500).json({
+            message: 'Error deleting form',
             error: (error as Error).message
         });
     }
 };
-

@@ -33,9 +33,9 @@ app.get('/', (req: Request, res: Response) => {
 //api routes
 app.use("/v1/auth", AuthRoutes);
 app.use("/v1/user", UserRoutes);
-app.use("v1/", formRoutes);
+app.use("/v1/forms", formRoutes);
 
-
+  
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
 });

@@ -7,15 +7,25 @@ const swaggerOptions = {
         title: 'API Documentation',
         version: '1.0.0',
       },
+      server: [
+        {
+          url: 'http://localhost:3000',
+        },
+      ],
       components: {
         securitySchemes: {
           token: { 
             type: 'apiKey',
             in: 'header',
-            name: 'token', 
+            name: 'token',
           },
         },
       },
+      security: [
+        {
+            token: [],
+        },
+      ],
     },
     apis: ['./src/routes/*.ts'], 
   };

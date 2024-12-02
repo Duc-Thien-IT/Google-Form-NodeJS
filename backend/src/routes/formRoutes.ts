@@ -157,24 +157,24 @@ router.put('/:userId/:formId', middlewareController.verifyToken, updateForm);
 
 /**
  * @swagger
- * /v1/forms/{userId}/{formId}:
+ * /v1/forms/{formId}:
  *   delete:
  *     summary: Delete a form
- *     description: Delete a form by form ID and user ID
+ *     description: Delete a form by form ID 
  *     tags: [Forms]
  *     security:
  *       - token: []
  *     parameters:
  *       - in: path
- *         name: userId
- *         required: true
- *         description: User ID
- *         schema:
- *           type: string
- *       - in: path
  *         name: formId
  *         required: true
  *         description: Form ID
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: userId
+ *         required: true
+ *         description: User ID
  *         schema:
  *           type: string
  *     responses:
@@ -185,6 +185,6 @@ router.put('/:userId/:formId', middlewareController.verifyToken, updateForm);
  *       500:
  *         description: Error deleting form
  */
-router.delete('/:userId/:formId', middlewareController.verifyToken, deleteForm);
+router.delete('/:formId', middlewareController.verifyToken, deleteForm);
 
 export default router;

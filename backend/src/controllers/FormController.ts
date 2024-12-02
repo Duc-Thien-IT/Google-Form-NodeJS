@@ -135,7 +135,6 @@ export const updateForm = async (req: Request, res: Response): Promise<void> => 
                         { transaction }
                     );
 
-                    // Cập nhật câu trả lời nếu cần thiết
                     if (question.answers && question.answers.length > 0) {
                         for (let answer of question.answers) {
                             await Answer.upsert(
@@ -170,11 +169,73 @@ export const updateForm = async (req: Request, res: Response): Promise<void> => 
 
    
 
+// export const deleteForm = async (req: Request, res: Response): Promise<void> => {
+//     const formId = req.params;
+//     const userId = req.query;
+
+//     try {
+//         const form = await Form.findOne({ where: { id: formId, user_id: userId } });
+
+//         if (!form) {
+//             res.status(404).json({
+//                 message: 'Form not found'
+//             });
+//             return;
+//         }
+
+//         const transaction = await sequelize.transaction();
+
+//         try {
+//             // Tìm tất cả các câu hỏi liên quan đến formId
+//             const questions = await Question.findAll({
+//                 where: { form_id: formId },
+//                 transaction
+//             });
+
+//             const questionIds = questions.map(question => question.id);
+
+//             await Answer.destroy({
+//                 where: {
+//                     question_id: {
+//                         [Op.in]: questionIds,
+//                     },
+//                 },
+//                 transaction,
+//             });
+
+//             // Xóa các câu hỏi liên quan đến formId
+//             await Question.destroy({
+//                 where: {
+//                     form_id: formId
+//                 },
+//                 transaction,
+//             });
+
+//             // Xóa form
+//             await form.destroy({ transaction });
+
+//             await transaction.commit();
+
+//             res.status(200).json({ message: 'Form and related questions and answers deleted successfully' });
+//         } catch (error) {
+//             await transaction.rollback();
+//             console.error(error);
+//             res.status(500).json({ message: 'Error deleting form' });
+//         }
+//     } catch (error) {
+//         console.error('Error deleting form:', error);
+//         res.status(500).json({
+//             message: 'Error deleting form',
+//             error: (error as Error).message
+//         });
+//     }
+// };
+
 export const deleteForm = async (req: Request, res: Response): Promise<void> => {
-    const { formId, userId } = req.params; // formId và userId lấy từ URL
+    const { formId } = req.params; // Trích xuất formId từ req.params
+    const  userId  = req.query.userId as string; // Trích xuất userId từ req.query
 
     try {
-        // Tìm form theo formId và userId (đảm bảo người dùng có quyền xóa form)
         const form = await Form.findOne({ where: { id: formId, user_id: userId } });
 
         if (!form) {
@@ -184,15 +245,14 @@ export const deleteForm = async (req: Request, res: Response): Promise<void> => 
             return;
         }
 
-        // Bắt đầu một giao dịch (transaction)
         const transaction = await sequelize.transaction();
 
         try {
             await Answer.destroy({
                 where: {
-                    question_id: {
-                        [Op.in]: sequelize.literal(`SELECT id FROM "questions" WHERE form_id = ${formId}`),
-                    },
+                  question_id: {
+                    [Op.in]: sequelize.literal(`(SELECT id FROM "questions" WHERE form_id = '${formId}')`),
+                  },
                 },
                 transaction,
             });
@@ -214,11 +274,11 @@ export const deleteForm = async (req: Request, res: Response): Promise<void> => 
             console.error(error);
             res.status(500).json({ message: 'Error deleting form' });
         }
-    } catch (error) {
-        console.error('Error deleting form:', error);
+    } catch (err) {
+        console.error("Error deleting form:", err);
         res.status(500).json({
             message: 'Error deleting form',
-            error: (error as Error).message
+            err: (err as Error).message
         });
     }
 };

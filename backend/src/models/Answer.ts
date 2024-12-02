@@ -1,6 +1,6 @@
 import { DataTypes, Sequelize, Model, Optional } from 'sequelize';
 import sequelize from '../config/ConnectDB';
-import Question from './Question';  // Import model Question
+import Question from './Question';
 
 interface AnswerAttributes {
   id: string;
